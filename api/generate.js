@@ -51,7 +51,10 @@ export default async function handler(req, res) {
       '{"headline":"짧은 광고 제목","body":"2~3문장 홍보 문구","hashtags":["#태그1","#태그2","#태그3","#태그4"]}'
     ].join('\n');
 
-    const r = await fetch('https://api.openai.com/v1/responses', {
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),30000);
+    let r;
+    try{r = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,8 +64,8 @@ export default async function handler(req, res) {
         model: 'gpt-5-mini',
         input: prompt,
         text: { format: { type: 'json_object' } }
-      })
-    });
+      }),signal:controller.signal
+    });}finally{clearTimeout(timeout);}
 
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data?.error?.message || 'OpenAI API error' });
@@ -77,6 +80,7 @@ export default async function handler(req, res) {
     };
     return res.status(200).json(safe);
   } catch (e) {
+    if(e?.name==='AbortError') return res.status(504).json({error:'광고 문구 생성 시간이 너무 길어졌습니다. 잠시 후 다시 시도해주세요.'});
     return res.status(500).json({ error: e.message || 'Server error' });
   }
 }
