@@ -30,6 +30,8 @@ export default async function handler(req,res){
     const {name,type,promo,tone,image}=req.body||{};
     if(!name?.trim()||!promo?.trim()) return res.status(400).json({error:'가게 이름과 홍보 내용을 입력해주세요.'});
     if(!image?.startsWith('data:image/')) return res.status(400).json({error:'사진을 먼저 선택해주세요.'});
+    if(image.length>5.6*1024*1024) return res.status(413).json({error:'업로드 이미지가 너무 큽니다.'});
+    const allowed=['image/jpeg','image/png','image/webp'];const mime=image.slice(5,image.indexOf(';'));if(!allowed.includes(mime)) return res.status(415).json({error:'JPG, PNG, WEBP 이미지만 사용할 수 있습니다.'});
     const base={name:name.trim(),type:type||'기타',promo:promo.trim(),tone:tone||'깔끔한'};
     // Sequential generation is intentional: easier on rate limits and clearer failures for the MVP.
     const ads=[];
