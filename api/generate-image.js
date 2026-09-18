@@ -40,10 +40,12 @@ async function kvCommand(command){
 }
 
 export default async function handler(req,res){
-  if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Method not allowed'});}
   try{
     const key=process.env.OPENAI_API_KEY;
-    if(!key) return res.status(500).json({error:'OPENAI_API_KEY missing'});
+    if(!key) return res.status(503).json({error:'광고 생성 서비스 설정을 확인 중입니다. 잠시 후 다시 이용해주세요.'});
     const {name,type,promo,tone,image}=req.body||{};
     if(String(name||'').length>80||String(promo||'').length>1200||String(type||'').length>80||String(tone||'').length>80) return res.status(400).json({error:'입력 내용이 너무 깁니다.'});
     if(!name?.trim()||!promo?.trim()) return res.status(400).json({error:'가게 이름과 홍보 내용을 입력해주세요.'});
@@ -64,5 +66,9 @@ export default async function handler(req,res){
     }
     await kvCommand(['SET',trialKey,'used']);
     res.setHeader('Cache-Control','no-store');return res.status(200).json({ads});
-  }catch(e){res.setHeader('Cache-Control','no-store');return res.status(500).json({error:e.message||'Server error'});}
+  }catch(e){
+    const msg=e?.message||'Server error';
+    const storageError=msg.includes('저장소');
+    return res.status(storageError?503:500).json({error:storageError?'무료 체험 확인 서비스에 일시적인 문제가 있습니다. 잠시 후 다시 이용해주세요.':msg});
+  }
 }
