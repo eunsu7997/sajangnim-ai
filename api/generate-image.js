@@ -22,6 +22,19 @@ Keep the main real product/store recognizable. Do not invent prices, discounts, 
   return {style:style.name,image:'data:image/png;base64,'+call.result};
 }
 
+function clientIp(req){
+  const forwarded=String(req.headers['x-forwarded-for']||'').split(',')[0].trim();
+  return forwarded||String(req.headers['x-real-ip']||'unknown').trim();
+}
+async function kvCommand(command){
+  const url=process.env.KV_REST_API_URL,token=process.env.KV_REST_API_TOKEN;
+  if(!url||!token) throw new Error('무료 체험 저장소 연결이 필요합니다.');
+  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(command)});
+  const data=await r.json();if(!r.ok||data.error) throw new Error(data.error||'무료 체험 저장소 오류');return data.result;
+}
+async function hasUsedTrial(ip){return (await kvCommand(['GET','trial:ip:'+ip]))!==null}
+async function markTrialUsed(ip){await kvCommand(['SET','trial:ip:'+ip,'1'])}
+
 export default async function handler(req,res){
   if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
   try{
@@ -33,10 +46,12 @@ export default async function handler(req,res){
     if(!image?.startsWith('data:image/')) return res.status(400).json({error:'사진을 먼저 선택해주세요.'});
     if(image.length>5.6*1024*1024) return res.status(413).json({error:'업로드 이미지가 너무 큽니다.'});
     const allowed=['image/jpeg','image/png','image/webp'];const mime=image.slice(5,image.indexOf(';'));if(!allowed.includes(mime)) return res.status(415).json({error:'JPG, PNG, WEBP 이미지만 사용할 수 있습니다.'});
+    const ip=clientIp(req);if(await hasUsedTrial(ip)) return res.status(403).json({error:'이 네트워크의 무료 체험 1회를 이미 사용했습니다. 정식 결제 기능은 준비 중입니다.'});
     const base={name:name.trim(),type:type||'기타',promo:promo.trim(),tone:tone||'깔끔한'};
     // Sequential generation is intentional: easier on rate limits and clearer failures for the MVP.
     const ads=[];
     for(const style of STYLES) ads.push(await generateOne(key,image,base,style));
+    await markTrialUsed(ip);
     res.setHeader('Cache-Control','no-store');return res.status(200).json({ads});
   }catch(e){return res.status(500).json({error:e.message||'Server error'});}
 }
