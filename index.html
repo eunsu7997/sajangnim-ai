@@ -37,7 +37,10 @@ async function makeAd(){
   if(!p){document.getElementById('result').innerText='홍보 내용을 입력해주세요.';return}
   document.getElementById('copyActions').style.display='none';document.getElementById('formatArea').style.display='none';document.getElementById('concepts').style.display='none';
   if(!file){document.getElementById('result').innerText='광고에 사용할 사진을 선택해주세요.';return}
+  const allowedTypes=['image/jpeg','image/png','image/webp'];
+  if(!allowedTypes.includes(file.type)){document.getElementById('result').innerText='JPG, PNG, WEBP 사진만 사용할 수 있습니다.';return}
   if(file.size>3.5*1024*1024){document.getElementById('result').innerText='사진이 너무 큽니다. 3.5MB 이하 이미지를 사용해주세요.';return}
+  if(logoFile&&!allowedTypes.includes(logoFile.type)){document.getElementById('result').innerText='로고는 JPG, PNG, WEBP 파일만 사용할 수 있습니다.';return}
   if(logoFile&&logoFile.size>2*1024*1024){document.getElementById('result').innerText='로고가 너무 큽니다. 2MB 이하 이미지를 사용해주세요.';return}
   btn.disabled=true;btn.innerText='AI가 광고를 준비하고 있어요...';btn.setAttribute('aria-busy','true');
   document.getElementById('result').innerText='잠시만 기다려주세요. 실제 AI가 문구를 생성하고 있어요.';
