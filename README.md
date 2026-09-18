@@ -16,6 +16,7 @@
 Frontend: `index.html`  
 Text API: `/api/generate`  
 Image API: `/api/generate-image`  
+Feedback API: `/api/feedback`  
 Hosting/API: Vercel  
 Trial state: Upstash Redis/KV
 
@@ -65,7 +66,7 @@ Trial state: Upstash Redis/KV
 ## 출시 전 필수 작업
 - 실제 유료 결제 전 사업/결제 요건 확인 및 결제·크레딧 원장 구현
 - 계정 도입 시 개인정보 처리방침과 데이터 보관/삭제 정책 정리
-- 실제 사용자 피드백을 서버로 수집할 경우 별도 동의·보관 정책 마련
+- 베타 피드백은 이름·연락처 없이 의견/구매의향만 Upstash에 90일 TTL로 저장. 공개 확대 전 별도 개인정보·보관 안내 재검토
 - 다양한 업종·사진에서 결과 품질과 실패율 측정
 
 
