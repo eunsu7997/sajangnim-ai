@@ -26,6 +26,12 @@ function clientIp(req){
   const forwarded=String(req.headers['x-forwarded-for']||'').split(',')[0].trim();
   return forwarded||String(req.headers['x-real-ip']||'unknown').trim();
 }
+async function trialId(ip){
+  const secret=process.env.KV_REST_API_TOKEN||'sajangnim-ai';
+  const bytes=new TextEncoder().encode(secret+'|'+ip);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 async function kvCommand(command){
   const url=process.env.KV_REST_API_URL,token=process.env.KV_REST_API_TOKEN;
   if(!url||!token) throw new Error('무료 체험 저장소 연결이 필요합니다.');
@@ -45,7 +51,7 @@ export default async function handler(req,res){
     if(image.length>5.6*1024*1024) return res.status(413).json({error:'업로드 이미지가 너무 큽니다.'});
     const allowed=['image/jpeg','image/png','image/webp'];const mime=image.slice(5,image.indexOf(';'));if(!allowed.includes(mime)) return res.status(415).json({error:'JPG, PNG, WEBP 이미지만 사용할 수 있습니다.'});
     const ip=clientIp(req);
-    const trialKey='trial:ip:'+ip;
+    const trialKey='trial:'+await trialId(ip);
     const reservation=await kvCommand(['SET',trialKey,'pending','NX','EX','600']);
     if(reservation!=='OK') return res.status(403).json({error:'이 네트워크의 무료 체험 1회를 이미 사용했거나 현재 생성 중입니다. 정식 결제 기능은 준비 중입니다.'});
     const base={name:name.trim(),type:type||'기타',promo:promo.trim(),tone:tone||'깔끔한'};
@@ -58,5 +64,5 @@ export default async function handler(req,res){
     }
     await kvCommand(['SET',trialKey,'used']);
     res.setHeader('Cache-Control','no-store');return res.status(200).json({ads});
-  }catch(e){return res.status(500).json({error:e.message||'Server error'});}
+  }catch(e){res.setHeader('Cache-Control','no-store');return res.status(500).json({error:e.message||'Server error'});}
 }
