@@ -28,6 +28,7 @@ export default async function handler(req,res){
     const key=process.env.OPENAI_API_KEY;
     if(!key) return res.status(500).json({error:'OPENAI_API_KEY missing'});
     const {name,type,promo,tone,image}=req.body||{};
+    if(String(name||'').length>80||String(promo||'').length>1200||String(type||'').length>80||String(tone||'').length>80) return res.status(400).json({error:'입력 내용이 너무 깁니다.'});
     if(!name?.trim()||!promo?.trim()) return res.status(400).json({error:'가게 이름과 홍보 내용을 입력해주세요.'});
     if(!image?.startsWith('data:image/')) return res.status(400).json({error:'사진을 먼저 선택해주세요.'});
     if(image.length>5.6*1024*1024) return res.status(413).json({error:'업로드 이미지가 너무 큽니다.'});
@@ -36,6 +37,6 @@ export default async function handler(req,res){
     // Sequential generation is intentional: easier on rate limits and clearer failures for the MVP.
     const ads=[];
     for(const style of STYLES) ads.push(await generateOne(key,image,base,style));
-    return res.status(200).json({ads});
+    res.setHeader('Cache-Control','no-store');return res.status(200).json({ads});
   }catch(e){return res.status(500).json({error:e.message||'Server error'});}
 }
